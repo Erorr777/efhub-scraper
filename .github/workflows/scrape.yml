@@ -1,1 +1,72 @@
+name: eFHUB Scraper
 
+on:
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: "عدد صفحات eFHUB للاختبار (0 = كل الصفحات)"
+        required: false
+        default: "3"
+        type: string
+      run_images:
+        description: "تشغيل معالجة الصور ورفعها إلى R2"
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: "30 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: efhub-scraper
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+      R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+      MAX_PAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.max_pages || '0' }}
+      RUN_IMAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.run_images || 'false' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Run scraper
+        run: python -m efhub_pipeline
+        env:
+          PYTHONPATH: src
+
+      - name: Upload run logs and artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: efhub-run-${{ github.run_number }}
+          path: |
+            artifacts/
+            data/
+          if-no-files-found: ignore
+          retention-days: 7
