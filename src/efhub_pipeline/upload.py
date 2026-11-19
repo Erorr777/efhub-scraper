@@ -64,55 +64,38 @@ def is_valid_player(player):
     )
 
 
-def build_player_row(pid, player, valid_clubs,
-                     valid_leagues, valid_nations, valid_boosters, now):
+def to_int(value, default=0):
+        try:
+            return int(value) if value is not None else default
+        except (ValueError, TypeError):
+            return default
 
-    stats = player.get("stats") or {}
-    model = player.get("playerModel") or {}
-
-    if not isinstance(stats, dict):
-        stats = {}
-
-    if not isinstance(model, dict):
-        model = {}
-
-    player_type = player.get("playerType", 1)
+    player_type = to_int(player.get("playerType"), 1)
 
     card_type = PLAYER_TYPE_MAP.get(
         player_type,
         f"Type_{player_type}"
     )
 
-    boost_id = player.get("boostId", 0)
-    has_booster = bool(boost_id and boost_id > 0)
+    boost_id = to_int(player.get("boostId"), 0)
+    has_booster = boost_id > 0
 
-    base_ovr = (
-        player.get("overallRating")
-        or player.get("ovr")
-        or 0
+    base_ovr = to_int(
+        player.get("overallRating") or player.get("ovr"),
+        0
     )
 
-    max_ovr = (
-        player.get("maxOverallRating")
-        or player.get("maxOvr")
-        or base_ovr
+    max_ovr = to_int(
+        player.get("maxOverallRating") or player.get("maxOvr"),
+        base_ovr
     )
 
-    level_cap = (
-        player.get("levelCap")
-        or player.get("maxLevel")
-        or 1
+    level_cap = to_int(
+        player.get("levelCap") or player.get("maxLevel"),
+        1
     )
 
-    try:
-        progression_points = (
-            (level_cap - 1) * 2
-            if level_cap > 1
-            else 0
-        )
-    except TypeError:
-        level_cap = 1
-        progression_points = 0
+    progression_points = max(0, (level_cap - 1) * 2)
 
     row = {
         "efhub_id": str(pid),
