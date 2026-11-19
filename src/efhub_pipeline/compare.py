@@ -106,9 +106,13 @@ def find_new_players(settings: Settings):
             f"- ID {pid}"
         )
 
-    save_json(new_players, NEW_PLAYERS_FILE)
-
-    print(f"✅ تم حفظ {len(new_players)} لاعب جديد.")
-    print(f"📁 الملف: {NEW_PLAYERS_FILE}")
-
+    if new_players:
+        save_json(new_players, NEW_PLAYERS_FILE)
+        print(f"✅ تم حفظ {len(new_players)} لاعب جديد.")
+        print(f"📁 الملف: {NEW_PLAYERS_FILE}")
+    else:
+        if NEW_PLAYERS_FILE.exists():
+            NEW_PLAYERS_FILE.unlink()
+        print("🎉 لا يوجد لاعبون جدد.")
+    
     return new_players
